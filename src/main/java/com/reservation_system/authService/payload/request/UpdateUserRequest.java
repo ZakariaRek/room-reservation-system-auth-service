@@ -9,8 +9,6 @@ public class UpdateUserRequest {
     @Size(min = 3, max = 20)
     private String username;
 
-
-
     @Size(max = 50)
     @Email
     private String email;
