@@ -28,7 +28,9 @@ public class Notification {
     private Status status;
 
     @Column(name = "user_id")
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", insertable = false, updatable = false)
+    private User user;
 
     @OneToOne
     @JoinColumn(name = "reservation_id")
