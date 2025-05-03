@@ -28,14 +28,22 @@ public class Reservation {
 
     @Enumerated(EnumType.STRING)
     private Status status;
-//
-//    @Column(name = "room_id")
-//    private Long roomId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private User user;
+    @Column(name = "room_id")
+    private Long roomId;
+
+    @Column(name = "user_id")
+    private Long userId;
 
     @OneToOne(mappedBy = "reservation", cascade = CascadeType.ALL)
     private Notification notification;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "room_id", insertable = false, updatable = false)
+    private Room room;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", insertable = false, updatable = false)
+    private User user;
+
 }
