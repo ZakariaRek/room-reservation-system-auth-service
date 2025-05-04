@@ -4,6 +4,7 @@ import com.reservation_system.authService.models.Room;
 import com.reservation_system.authService.repository.RoomRepository;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -13,10 +14,9 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/rooms")
-@RequiredArgsConstructor
 public class RoomController {
-
-    private final RoomRepository roomRepository;
+    @Autowired
+    private  RoomRepository roomRepository;
 
     @GetMapping
     public List<Room> getAllRooms() {
