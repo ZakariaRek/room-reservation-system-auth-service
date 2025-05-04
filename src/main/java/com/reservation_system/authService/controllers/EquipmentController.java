@@ -6,6 +6,7 @@ import com.reservation_system.authService.models.Room;
 import com.reservation_system.authService.repository.EquipmentRepository;
 import com.reservation_system.authService.repository.RoomRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,11 +15,12 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/equipments")
-@RequiredArgsConstructor
-public class EquipmentController {
 
-    private final EquipmentRepository equipmentRepository;
-    private final RoomRepository roomRepository;
+public class EquipmentController {
+    @Autowired
+    private  EquipmentRepository equipmentRepository;
+    @Autowired
+    private  RoomRepository roomRepository;
 
     // 🟢 GET all equipments
     @GetMapping

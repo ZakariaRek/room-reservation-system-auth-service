@@ -27,11 +27,9 @@ public class Notification {
     @Enumerated(EnumType.STRING)
     private Status status;
 
-    @Column(name = "user_id")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", insertable = false, updatable = false)
     private User user;
-
     @OneToOne
     @JoinColumn(name = "reservation_id")
     private Reservation reservation;
