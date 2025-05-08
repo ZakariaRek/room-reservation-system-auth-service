@@ -28,7 +28,7 @@ public class UserController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+//    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<List<UserResponse>> getAllUsers() {
         List<User> users = userService.getUsers();
 
@@ -39,14 +39,14 @@ public class UserController {
                         user.getEmail(),
                         user.getRoles().stream()
                                 .map(role -> role.getName().name())
-                                .collect(Collectors.toSet())))
+                                .collect(Collectors.toSet())
+                ))
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(userResponses);
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
         User user = userService.getUserById(id);
 
@@ -63,7 +63,6 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<?> updateUser(@PathVariable Long id, @Valid @RequestBody UpdateUserRequest updateUserRequest) {
         User updatedUser = userService.updateUser(
                 id,
@@ -83,6 +82,11 @@ public class UserController {
         );
 
         return ResponseEntity.ok(userResponse);
+    }
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+        userService.deleteUser(id);
+        return ResponseEntity.ok(new MessageResponse("User deleted successfully!"));
     }
 
     @GetMapping("/hello")

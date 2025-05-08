@@ -1,6 +1,7 @@
 package com.reservation_system.authService.models;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 @Data
 @Entity
@@ -35,15 +37,18 @@ public class Reservation {
     @Column(name = "user_id")
     private Long userId;
 
-    @OneToOne(mappedBy = "reservation", cascade = CascadeType.ALL)
-    private Notification notification;
+    @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL)
+    @JsonIgnore
+    private List<Notification> notification;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id", insertable = false, updatable = false)
+    @JsonIgnore
     private Room room;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", insertable = false, updatable = false)
+    @JsonIgnore
     private User user;
 
 }

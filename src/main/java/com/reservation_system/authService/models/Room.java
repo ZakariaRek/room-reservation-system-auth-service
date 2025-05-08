@@ -32,6 +32,9 @@ public class Room {
     @Enumerated(EnumType.STRING)
     private RoomType type;
 
+    @Column(name = "user_id")
+    private Long userId;
+
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id" ,insertable = false, updatable = false)
