@@ -3,6 +3,8 @@ package com.reservation_system.authService.controllers;
 import com.reservation_system.authService.Services.ReservationService;
 import com.reservation_system.authService.models.Reservation;
 import com.reservation_system.authService.models.Status;
+import com.reservation_system.authService.payload.request.ReservationRequest;
+import com.reservation_system.authService.payload.response.MessageResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -10,15 +12,24 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+
 @RestController
 @RequestMapping("/api/reservations")
 public class ReservationController {
     @Autowired
     private ReservationService reservationService;
 
+    // Add endpoint to update reservation status (which will also update notifications)
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Reservation> updateReservationStatus(
+            @PathVariable Long id,
+            @RequestParam Status status) {
+        return ResponseEntity.ok(reservationService.updateReservationStatus(id, status));
+    }
+
     // Create
     @PostMapping
-    public Reservation createReservation(@RequestBody Reservation reservation) {
+    public ResponseEntity<MessageResponse> createReservation(@RequestBody ReservationRequest reservation) {
         return reservationService.createReservation(reservation);
     }
 
@@ -49,7 +60,7 @@ public class ReservationController {
         return ResponseEntity.ok().build();
     }
 
-    // Méthodes personnalisées
+    // Custom methods
     @GetMapping("/room/{roomId}")
     public List<Reservation> getReservationsByRoomId(@PathVariable Long roomId) {
         return reservationService.getReservationsByRoomId(roomId);

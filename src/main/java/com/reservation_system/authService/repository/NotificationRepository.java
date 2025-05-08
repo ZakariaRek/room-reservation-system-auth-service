@@ -11,7 +11,9 @@ import java.util.List;
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
 
-    List<Notification> findByUserId(Long userId);
+    List<Notification> findBySenderId(Long senderId);
+
+    List<Notification> findByReceiverId(Long receiverId);
 
     List<Notification> findByStatus(Status status);
 
@@ -19,5 +21,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     List<Notification> findByDateAfter(LocalDateTime date);
 
-    List<Notification> findByUserIdAndStatus(Long userId, Status status);
+    List<Notification> findByReceiverIdAndStatus(Long receiverId, Status status);
+
+    List<Notification> findBySenderIdAndStatus(Long senderId, Status status);
 }

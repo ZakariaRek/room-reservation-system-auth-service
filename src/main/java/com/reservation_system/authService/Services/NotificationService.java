@@ -1,8 +1,11 @@
 package com.reservation_system.authService.Services;
 
 import com.reservation_system.authService.models.Notification;
+import com.reservation_system.authService.models.Reservation;
 import com.reservation_system.authService.models.Status;
+import com.reservation_system.authService.models.User;
 import com.reservation_system.authService.repository.NotificationRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -11,10 +14,34 @@ import java.util.Optional;
 
 @Service
 public class NotificationService {
-    protected NotificationRepository notificationRepository;
+    @Autowired
+    private NotificationRepository notificationRepository;
 
     // Create
     public Notification createNotification(Notification notification) {
+        if(notification.getDate() == null) {
+            notification.setDate(LocalDateTime.now());
+        }
+        return notificationRepository.save(notification);
+    }
+
+    // Create notification for reservation
+    public Notification createReservationNotification(Reservation reservation, User sender, User receiver, String message, Status status) {
+        Notification notification = new Notification();
+        notification.setMessage(message);
+        notification.setDate(LocalDateTime.now());
+        notification.setStatus(status);
+        notification.setReservation(reservation);
+        notification.setSender(sender);
+        notification.setReceiver(receiver);
+        return notificationRepository.save(notification);
+    }
+
+    // Change notification status
+    public Notification updateNotificationStatus(Long id, Status status) {
+        Notification notification = notificationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Notification not found with ID: " + id));
+        notification.setStatus(status);
         return notificationRepository.save(notification);
     }
 
@@ -34,6 +61,8 @@ public class NotificationService {
                 .orElseThrow(() -> new RuntimeException("Notification not found with ID: " + id));
         notification.setMessage(notificationDetails.getMessage());
         notification.setStatus(notificationDetails.getStatus());
+        notification.setSender(notificationDetails.getSender());
+        notification.setReceiver(notificationDetails.getReceiver());
         return notificationRepository.save(notification);
     }
 
@@ -42,8 +71,12 @@ public class NotificationService {
         notificationRepository.deleteById(id);
     }
 
-    public List<Notification> getNotificationsByUserId(Long userId) {
-        return notificationRepository.findByUserId(userId);
+    public List<Notification> getNotificationsBySenderId(Long senderId) {
+        return notificationRepository.findBySenderId(senderId);
+    }
+
+    public List<Notification> getNotificationsByReceiverId(Long receiverId) {
+        return notificationRepository.findByReceiverId(receiverId);
     }
 
     public List<Notification> getNotificationsByStatus(Status status) {
@@ -58,8 +91,11 @@ public class NotificationService {
         return notificationRepository.findByDateAfter(date);
     }
 
-    public List<Notification> getNotificationsByUserIdAndStatus(Long userId, Status status) {
-        return notificationRepository.findByUserIdAndStatus(userId, status);
+    public List<Notification> getNotificationsByReceiverIdAndStatus(Long receiverId, Status status) {
+        return notificationRepository.findByReceiverIdAndStatus(receiverId, status);
     }
 
+    public List<Notification> getNotificationsBySenderIdAndStatus(Long senderId, Status status) {
+        return notificationRepository.findBySenderIdAndStatus(senderId, status);
+    }
 }

@@ -13,10 +13,17 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/notifications")
-
 public class NotificationController {
     @Autowired
     private NotificationService notificationService;
+
+    // Update notification status endpoint
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Notification> updateNotificationStatus(
+            @PathVariable Long id,
+            @RequestParam Status status) {
+        return ResponseEntity.ok(notificationService.updateNotificationStatus(id, status));
+    }
 
     // Create
     @PostMapping
@@ -51,10 +58,15 @@ public class NotificationController {
         return ResponseEntity.ok().build();
     }
 
-    // Méthodes personnalisées
-    @GetMapping("/user/{userId}")
-    public List<Notification> getNotificationsByUserId(@PathVariable Long userId) {
-        return notificationService.getNotificationsByUserId(userId);
+    // Updated custom methods for sender/receiver
+    @GetMapping("/sender/{senderId}")
+    public List<Notification> getNotificationsBySenderId(@PathVariable Long senderId) {
+        return notificationService.getNotificationsBySenderId(senderId);
+    }
+
+    @GetMapping("/receiver/{receiverId}")
+    public List<Notification> getNotificationsByReceiverId(@PathVariable Long receiverId) {
+        return notificationService.getNotificationsByReceiverId(receiverId);
     }
 
     @GetMapping("/status/{status}")
@@ -73,10 +85,15 @@ public class NotificationController {
         return notificationService.getNotificationsAfterDate(date);
     }
 
-    @GetMapping("/user/{userId}/status/{status}")
-    public List<Notification> getNotificationsByUserIdAndStatus(
-            @PathVariable Long userId, @PathVariable Status status) {
-        return notificationService.getNotificationsByUserIdAndStatus(userId, status);
+    @GetMapping("/receiver/{receiverId}/status/{status}")
+    public List<Notification> getNotificationsByReceiverIdAndStatus(
+            @PathVariable Long receiverId, @PathVariable Status status) {
+        return notificationService.getNotificationsByReceiverIdAndStatus(receiverId, status);
     }
 
+    @GetMapping("/sender/{senderId}/status/{status}")
+    public List<Notification> getNotificationsBySenderIdAndStatus(
+            @PathVariable Long senderId, @PathVariable Status status) {
+        return notificationService.getNotificationsBySenderIdAndStatus(senderId, status);
+    }
 }
