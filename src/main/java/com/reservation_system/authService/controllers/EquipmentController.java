@@ -22,7 +22,6 @@ public class EquipmentController {
     @Autowired
     private  RoomRepository roomRepository;
 
-    // 🟢 GET all equipments
     @GetMapping
     public List<Equipment> getAllEquipments() {
         return equipmentRepository.findAll();
