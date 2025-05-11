@@ -1,5 +1,6 @@
 package com.reservation_system.authService.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.reservation_system.authService.models.Equipment;
 import com.reservation_system.authService.models.RoomType;
 import jakarta.persistence.*;
@@ -38,8 +39,11 @@ public class Room {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id" ,insertable = false, updatable = false)
+    @JsonIgnore
     private User user;
 
     @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
+
     private List<Reservation> reservations;
 }
