@@ -78,7 +78,7 @@ public class ReservationService {
     }
 
     // Update reservation status and related notification
-    public Reservation updateReservationStatus(Long id, Status status) {
+    public Notification updateReservationStatus(Long id, Status status) {
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Reservation not found with ID: " + id));
 
@@ -103,15 +103,15 @@ public class ReservationService {
         String statusMessage = "Your reservation for room " + reservation.getRoom().getName()
                 + " on " + reservation.getDate() + " has been " + status.toString().toLowerCase();
 
-        notificationService.createReservationNotification(
+
+
+        return notificationService.createReservationNotification(
                 updatedReservation,
                 admin,
                 user,
                 statusMessage,
                 status
         );
-
-        return updatedReservation;
     }
     // Read (all)
     public List<Reservation> getAllReservations() {

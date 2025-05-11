@@ -1,6 +1,7 @@
 package com.reservation_system.authService.controllers;
 
 import com.reservation_system.authService.Services.ReservationService;
+import com.reservation_system.authService.models.Notification;
 import com.reservation_system.authService.models.Reservation;
 import com.reservation_system.authService.models.Status;
 import com.reservation_system.authService.payload.request.ReservationRequest;
@@ -21,7 +22,7 @@ public class ReservationController {
 
     // Add endpoint to update reservation status (which will also update notifications)
     @PatchMapping("/{id}/status")
-    public ResponseEntity<Reservation> updateReservationStatus(
+    public ResponseEntity<Notification> updateReservationStatus(
             @PathVariable Long id,
             @RequestParam Status status) {
         return ResponseEntity.ok(reservationService.updateReservationStatus(id, status));
