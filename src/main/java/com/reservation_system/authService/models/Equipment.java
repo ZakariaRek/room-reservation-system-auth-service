@@ -1,5 +1,6 @@
 package com.reservation_system.authService.models;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,5 +23,6 @@ public class Equipment {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id")
+    @JsonBackReference // Permet de casser la boucle infinie
     private Room room;
 }
