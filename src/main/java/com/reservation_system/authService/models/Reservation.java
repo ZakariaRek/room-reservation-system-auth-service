@@ -26,7 +26,9 @@ public class Reservation {
 
     private LocalDate date;
 
-    private LocalTime time;
+    private LocalTime fromtime;
+    private LocalTime totime;
+
 
     @Enumerated(EnumType.STRING)
     private Status status;
