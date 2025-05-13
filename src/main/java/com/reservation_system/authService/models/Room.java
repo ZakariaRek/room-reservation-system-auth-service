@@ -1,5 +1,6 @@
 package com.reservation_system.authService.models;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.reservation_system.authService.models.Equipment;
 import com.reservation_system.authService.models.RoomType;
@@ -27,7 +28,8 @@ public class Room {
 
     private Integer capacity;
 
-    @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference // << AJOUTE CECI
     private List<Equipment> equipments;
 
     @Enumerated(EnumType.STRING)
@@ -35,6 +37,7 @@ public class Room {
 
     @Column(name = "user_id")
     private Long userId;
+
 
 
     @ManyToOne(fetch = FetchType.LAZY)
