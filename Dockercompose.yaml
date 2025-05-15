@@ -9,8 +9,9 @@ services:
       MYSQL_DATABASE: testdb_spring
       MYSQL_USER: testuser
       MYSQL_PASSWORD: testpass
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
     ports:
-      - "3307:3306"
+      - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
@@ -27,12 +28,13 @@ services:
       dockerfile: Dockerfile
     container_name: auth-service
     ports:
-      - "8083:8083"  # Changed to match your application.properties port
+      - "8083:8083"
     environment:
+      - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/testdb_spring?useSSL=false&allowPublicKeyRetrieval=true
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=root
-      - SERVER_PORT=8081
+      - SERVER_PORT=8083
     networks:
       - app-network
     depends_on:
