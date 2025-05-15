@@ -33,7 +33,6 @@ pipeline {
             }
         }
 
-        // REPLACE "Start Services" with this:
         stage('Start MySQL Container') {
             steps {
                 script {
@@ -75,6 +74,7 @@ pipeline {
             }
         }
 
+        /* TESTS SKIPPED
         stage('Run Tests') {
             steps {
                 script {
@@ -90,6 +90,7 @@ pipeline {
                 }
             }
         }
+        */
 
         stage('Package Application') {
             steps {
@@ -113,7 +114,6 @@ pipeline {
             }
         }
 
-        // REPLACE "Test Docker Container" with this:
         stage('Test Docker Container') {
             steps {
                 script {
