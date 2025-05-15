@@ -33,15 +33,26 @@ pipeline {
             }
         }
 
-        stage('Start Services') {
+        // REPLACE "Start Services" with this:
+        stage('Start MySQL Container') {
             steps {
                 script {
                     sh '''
-                        # Stop any existing containers (using docker compose v2)
-                        docker compose down || true
+                        # Create a network if it doesn't exist
+                        docker network create app-network || true
                         
-                        # Start MySQL only
-                        docker compose up -d mysql
+                        # Stop and remove any existing MySQL container
+                        docker stop mysql-db || true
+                        docker rm mysql-db || true
+                        
+                        # Start MySQL container
+                        docker run -d \
+                            --name mysql-db \
+                            --network app-network \
+                            -e MYSQL_ROOT_PASSWORD=root \
+                            -e MYSQL_DATABASE=testdb_spring \
+                            -p 3306:3306 \
+                            mysql:8.0
                         
                         # Wait for MySQL to be ready
                         echo "Waiting for MySQL to be ready..."
@@ -102,26 +113,33 @@ pipeline {
             }
         }
 
+        // REPLACE "Test Docker Container" with this:
         stage('Test Docker Container') {
             steps {
                 script {
                     sh """
-                        # Stop any existing auth-service
-                        docker compose stop auth-service || true
-                        docker compose rm -f auth-service || true
-                        
-                        # Start the full stack
-                        docker compose up -d
+                        # Run the application container
+                        docker run -d \
+                            --name auth-service-test \
+                            --network app-network \
+                            -e SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/testdb_spring?useSSL=false&allowPublicKeyRetrieval=true \
+                            -e SPRING_DATASOURCE_USERNAME=root \
+                            -e SPRING_DATASOURCE_PASSWORD=root \
+                            -p 8083:8083 \
+                            ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
                         
                         # Wait for application to start
-                        echo "Waiting for application to start..."
                         sleep 30
                         
                         # Check logs
-                        docker compose logs auth-service
+                        docker logs auth-service-test
                         
                         # Test if application is running
                         curl -f http://localhost:8083/api/auth/signin || echo "API test failed"
+                        
+                        # Cleanup
+                        docker stop auth-service-test || true
+                        docker rm auth-service-test || true
                     """
                 }
             }
@@ -146,9 +164,11 @@ pipeline {
     post {
         always {
             script {
-                // Stop services
+                // Clean up containers
                 sh """
-                    docker compose down || true
+                    docker stop mysql-db || true
+                    docker rm mysql-db || true
+                    docker network rm app-network || true
                     docker image prune -f || true
                 """
             }
