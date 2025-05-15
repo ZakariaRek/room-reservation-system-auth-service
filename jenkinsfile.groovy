@@ -104,6 +104,17 @@ pipeline {
                         docker stop auth-service-test || true
                         docker rm auth-service-test || true
                         
+                        # Find and stop any container using port 8083
+                        CONTAINER_ON_PORT=$(docker ps --filter "publish=8083" -q)
+                        if [ ! -z "$CONTAINER_ON_PORT" ]; then
+                            echo "Stopping container using port 8083: $CONTAINER_ON_PORT"
+                            docker stop $CONTAINER_ON_PORT || true
+                            docker rm $CONTAINER_ON_PORT || true
+                        fi
+                        
+                        # Use a different port for testing to avoid conflicts
+                        TEST_PORT=8084
+                        
                         # Run the application container with properly quoted URL
                         docker run -d \
                             --name auth-service-test \
@@ -111,7 +122,8 @@ pipeline {
                             -e SPRING_DATASOURCE_URL="jdbc:mysql://mysql-db:3306/testdb_spring?useSSL=false&allowPublicKeyRetrieval=true" \
                             -e SPRING_DATASOURCE_USERNAME=root \
                             -e SPRING_DATASOURCE_PASSWORD=root \
-                            -p 8083:8083 \
+                            -e SERVER_PORT=${TEST_PORT} \
+                            -p ${TEST_PORT}:${TEST_PORT} \
                             ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
                         
                         # Wait for application to start
@@ -121,7 +133,7 @@ pipeline {
                         docker logs auth-service-test
                         
                         # Test if application is running
-                        curl -f http://localhost:8083/api/auth/signin || echo "API test failed"
+                        curl -f http://localhost:${TEST_PORT}/api/auth/signin || echo "API test failed"
                         
                         # Cleanup
                         docker stop auth-service-test || true
