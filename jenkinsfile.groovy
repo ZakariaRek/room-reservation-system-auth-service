@@ -100,8 +100,19 @@ pipeline {
             steps {
                 script {
                     sh '''
-                        # Run the application container (single line)
-                        docker run -d --name auth-service-test --network app-network -e SPRING_DATASOURCE_URL="jdbc:mysql://mysql-db:3306/testdb_spring?useSSL=false&allowPublicKeyRetrieval=true" -e SPRING_DATASOURCE_USERNAME=root -e SPRING_DATASOURCE_PASSWORD=root -p 8083:8083 ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+                        # Stop any existing containers that might be using port 8083
+                        docker ps -q --filter "publish=8083" | xargs -r docker stop || true
+                        docker ps -aq --filter "name=auth-service-test" | xargs -r docker rm || true
+                        
+                        # Run the application container with properly quoted URL
+                        docker run -d \
+                            --name auth-service-test \
+                            --network app-network \
+                            -e SPRING_DATASOURCE_URL="jdbc:mysql://mysql-db:3306/testdb_spring?useSSL=false&allowPublicKeyRetrieval=true" \
+                            -e SPRING_DATASOURCE_USERNAME=root \
+                            -e SPRING_DATASOURCE_PASSWORD=root \
+                            -p 8083:8083 \
+                            ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
                         
                         # Wait for application to start
                         sleep 30
