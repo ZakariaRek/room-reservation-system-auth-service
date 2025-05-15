@@ -37,11 +37,11 @@ pipeline {
             steps {
                 script {
                     sh '''
-                        # Stop any existing containers
-                        docker-compose down
+                        # Stop any existing containers (using docker compose v2)
+                        docker compose down || true
                         
                         # Start MySQL only
-                        docker-compose up -d mysql
+                        docker compose up -d mysql
                         
                         # Wait for MySQL to be ready
                         echo "Waiting for MySQL to be ready..."
@@ -68,9 +68,14 @@ pipeline {
             steps {
                 script {
                     sh '''
-                        # Skip tests for now or use H2 for testing
-                        mvn test -DskipTests
+                        # Run tests with test profile (uses H2)
+                        mvn test -Dspring.profiles.active=test
                     '''
+                }
+            }
+            post {
+                always {
+                    junit '**/target/surefire-reports/*.xml'
                 }
             }
         }
@@ -102,18 +107,18 @@ pipeline {
                 script {
                     sh """
                         # Stop any existing auth-service
-                        docker-compose stop auth-service || true
-                        docker-compose rm -f auth-service || true
+                        docker compose stop auth-service || true
+                        docker compose rm -f auth-service || true
                         
                         # Start the full stack
-                        docker-compose up -d
+                        docker compose up -d
                         
                         # Wait for application to start
                         echo "Waiting for application to start..."
                         sleep 30
                         
                         # Check logs
-                        docker-compose logs auth-service
+                        docker compose logs auth-service
                         
                         # Test if application is running
                         curl -f http://localhost:8083/api/auth/signin || echo "API test failed"
@@ -143,7 +148,7 @@ pipeline {
             script {
                 // Stop services
                 sh """
-                    docker-compose down
+                    docker compose down || true
                     docker image prune -f || true
                 """
             }
