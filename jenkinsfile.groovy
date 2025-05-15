@@ -100,9 +100,9 @@ pipeline {
             steps {
                 script {
                     sh '''
-                        # Stop any existing containers that might be using port 8083
-                        docker ps -q --filter "publish=8083" | xargs -r docker stop || true
-                        docker ps -aq --filter "name=auth-service-test" | xargs -r docker rm || true
+                        # Clean up any existing test containers FIRST
+                        docker stop auth-service-test || true
+                        docker rm auth-service-test || true
                         
                         # Run the application container with properly quoted URL
                         docker run -d \
@@ -154,6 +154,8 @@ pipeline {
                 sh """
                     docker stop mysql-db || true
                     docker rm mysql-db || true
+                    docker stop auth-service-test || true
+                    docker rm auth-service-test || true
                     docker network rm app-network || true
                     docker image prune -f || true
                 """
