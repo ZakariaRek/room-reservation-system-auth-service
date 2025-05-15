@@ -2,19 +2,25 @@ pipeline {
     agent any
 
     tools {
-        maven 'Maven-3.9.0' // Make sure this matches your Jenkins Maven installation name
-        jdk 'JDK-17'       // Make sure this matches your Jenkins JDK installation name
+        maven 'Maven-3.9.0'
+        jdk 'JDK-17'
     }
 
     environment {
-        // MySQL Configuration
+        // MySQL Configuration (using docker-compose MySQL on port 3307)
         MYSQL_ROOT_PASSWORD = 'root'
         MYSQL_DATABASE = 'testdb_spring'
+        MYSQL_HOST = 'mysql-db'
 
         // Application Configuration
-        SPRING_DATASOURCE_URL = 'jdbc:mysql://localhost:3306/testdb_spring?useSSL=false&allowPublicKeyRetrieval=true'
+        SPRING_DATASOURCE_URL = 'jdbc:mysql://mysql-db:3306/testdb_spring?useSSL=false&allowPublicKeyRetrieval=true'
         SPRING_DATASOURCE_USERNAME = 'root'
-        SPRING_DATASOURCE_PASSWORD = ''
+        SPRING_DATASOURCE_PASSWORD = 'root'
+
+        // Docker Configuration
+        DOCKER_REGISTRY = '' // Add your registry if needed
+        DOCKER_IMAGE_NAME = 'room-reservation-auth-service'
+        DOCKER_IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
     stages {
@@ -27,51 +33,31 @@ pipeline {
                         extensions: [[$class: 'CleanCheckout']],
                         submoduleCfg: [],
                         userRemoteConfigs: [[
-                                                    credentialsId: 'git_Jenk', // Configure this in Jenkins
+                                                    credentialsId: 'git_Jenk',
                                                     url: 'https://github.com/ZakariaRek/room-reservation-system-auth-service'
                                             ]]
                 ])
             }
         }
 
-        stage('Setup MySQL') {
-            steps {
-                script {
-                    // Using Docker to run MySQL for tests
-                    sh '''
-                        docker run -d \
-                            --name mysql-test-${BUILD_NUMBER} \
-                            -e MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD} \
-                            -e MYSQL_DATABASE=${MYSQL_DATABASE} \
-                            -p 3306:3306 \
-                            mysql:8.0
-                        
-                        # Wait for MySQL to be ready
-                        sleep 30
-                        
-                        # Check if MySQL is ready
-                        for i in {1..30}; do
-                            if docker exec mysql-test-${BUILD_NUMBER} mysqladmin ping -h localhost -u root -proot --silent; then
-                                echo "MySQL is ready!"
-                                break
-                            fi
-                            echo "Waiting for MySQL..."
-                            sleep 2
-                        done
-                    '''
-                }
-            }
-        }
-
-        stage('Build') {
+        stage('Build with Maven') {
             steps {
                 sh 'mvn clean compile'
             }
         }
 
-        stage('Test') {
+        stage('Run Tests') {
             steps {
-                sh 'mvn test'
+                script {
+                    // Use the MySQL from docker-compose
+                    sh '''
+                        # Update datasource URL to use docker-compose MySQL
+                        export SPRING_DATASOURCE_URL='jdbc:mysql://mysql-db:3306/testdb_spring?useSSL=false&allowPublicKeyRetrieval=true'
+                        
+                        # Run tests
+                        mvn test
+                    '''
+                }
             }
             post {
                 always {
@@ -80,13 +66,89 @@ pipeline {
             }
         }
 
-        stage('Package') {
+        stage('Package Application') {
             steps {
                 sh 'mvn package -DskipTests'
             }
             post {
                 success {
                     archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    sh """
+                        docker build -t ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} .
+                        docker tag ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_NAME}:latest
+                    """
+                }
+            }
+        }
+
+        stage('Security Scan with Trivy') {
+            steps {
+                script {
+                    sh """
+                        # Use Trivy from docker-compose to scan the image
+                        docker run --rm \
+                            --network jenkins-network \
+                            -v /var/run/docker.sock:/var/run/docker.sock \
+                            aquasec/trivy:latest image \
+                            --exit-code 0 \
+                            --severity HIGH,CRITICAL \
+                            ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+                    """
+                }
+            }
+        }
+
+        stage('Test Docker Container') {
+            steps {
+                script {
+                    sh """
+                        # Run the container on the same network as MySQL
+                        docker run -d \
+                            --name test-app-${BUILD_NUMBER} \
+                            --network jenkins-network \
+                            -e SPRING_DATASOURCE_URL='jdbc:mysql://mysql-db:3307/testdb_spring?useSSL=false&allowPublicKeyRetrieval=true' \
+                            -e SPRING_DATASOURCE_USERNAME=root \
+                            -e SPRING_DATASOURCE_PASSWORD=root \
+                            -p 8081:8083 \
+                            ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+                        
+                        # Wait for application to start
+                        sleep 30
+                        
+                        # Test if application is running
+                        curl http://localhost:8081/api/auth/signin || true
+                        
+                        # Stop test container
+                        docker stop test-app-${BUILD_NUMBER}
+                        docker rm test-app-${BUILD_NUMBER}
+                    """
+                }
+            }
+        }
+
+        stage('Push to Registry') {
+            when {
+                branch 'main'
+            }
+            steps {
+                script {
+                    if (env.DOCKER_REGISTRY) {
+                        withCredentials([usernamePassword(credentialsId: 'docker-registry-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                            sh """
+                                echo ${DOCKER_PASS} | docker login ${DOCKER_REGISTRY} -u ${DOCKER_USER} --password-stdin
+                                docker tag ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+                                docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+                                docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:latest
+                            """
+                        }
+                    }
                 }
             }
         }
@@ -102,9 +164,13 @@ pipeline {
 
     post {
         always {
-            // Cleanup MySQL container
-            sh 'docker stop mysql-test-${BUILD_NUMBER} || true'
-            sh 'docker rm mysql-test-${BUILD_NUMBER} || true'
+            script {
+                // Clean up any test containers
+                sh """
+                    docker rm -f test-app-${BUILD_NUMBER} || true
+                    docker image prune -f || true
+                """
+            }
 
             // Clean workspace
             cleanWs()
@@ -112,7 +178,6 @@ pipeline {
 
         success {
             script {
-                // Send notification on success
                 emailext(
                         subject: "Jenkins Build Success: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
                         body: """
@@ -121,7 +186,7 @@ pipeline {
                         <ul>
                             <li>Job: ${env.JOB_NAME}</li>
                             <li>Build Number: ${env.BUILD_NUMBER}</li>
-                            <li>Branch: ${env.BRANCH_NAME}</li>
+                            <li>Docker Image: ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}</li>
                             <li>Build URL: ${env.BUILD_URL}</li>
                         </ul>
                     """,
@@ -133,7 +198,6 @@ pipeline {
 
         failure {
             script {
-                // Send notification on failure
                 emailext(
                         subject: "Jenkins Build Failed: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
                         body: """
@@ -142,7 +206,6 @@ pipeline {
                         <ul>
                             <li>Job: ${env.JOB_NAME}</li>
                             <li>Build Number: ${env.BUILD_NUMBER}</li>
-                            <li>Branch: ${env.BRANCH_NAME}</li>
                             <li>Build URL: ${env.BUILD_URL}</li>
                         </ul>
                         <p>Please check the console output for details.</p>
