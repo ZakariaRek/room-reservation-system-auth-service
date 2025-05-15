@@ -100,8 +100,15 @@ pipeline {
             steps {
                 script {
                     sh '''
-                        # Run the application container (single line)
-                        docker run -d --name auth-service-test --network app-network -e SPRING_DATASOURCE_URL="jdbc:mysql://mysql-db:3306/testdb_spring?useSSL=false&allowPublicKeyRetrieval=true" -e SPRING_DATASOURCE_USERNAME=root -e SPRING_DATASOURCE_PASSWORD=root -p 8083:8083 ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+                        # Run the application container with properly quoted URL
+                        docker run -d \
+                            --name auth-service-test \
+                            --network app-network \
+                            -e SPRING_DATASOURCE_URL="jdbc:mysql://mysql-db:3306/testdb_spring?useSSL=false&allowPublicKeyRetrieval=true" \
+                            -e SPRING_DATASOURCE_USERNAME=root \
+                            -e SPRING_DATASOURCE_PASSWORD=root \
+                            -p 8083:8083 \
+                            ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
                         
                         # Wait for application to start
                         sleep 30
