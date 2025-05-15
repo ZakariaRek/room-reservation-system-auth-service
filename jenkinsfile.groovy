@@ -13,9 +13,9 @@ pipeline {
         MYSQL_HOST = 'mysql-db'
 
         // Application Configuration
-        SPRING_DATASOURCE_URL = 'jdbc:mysql://mysql-db:3306/testdb_spring?useSSL=false&allowPublicKeyRetrieval=true'
+        SPRING_DATASOURCE_URL = 'jdbc:mysql://mysql-db:3307/testdb_spring?useSSL=false&allowPublicKeyRetrieval=true'
         SPRING_DATASOURCE_USERNAME = 'root'
-        SPRING_DATASOURCE_PASSWORD = 'root'
+        SPRING_DATASOURCE_PASSWORD = ''
 
         // Docker Configuration
         DOCKER_REGISTRY = '' // Add your registry if needed
@@ -52,7 +52,7 @@ pipeline {
                     // Use the MySQL from docker-compose
                     sh '''
                         # Update datasource URL to use docker-compose MySQL
-                        export SPRING_DATASOURCE_URL='jdbc:mysql://mysql-db:3306/testdb_spring?useSSL=false&allowPublicKeyRetrieval=true'
+                        export SPRING_DATASOURCE_URL='jdbc:mysql://mysql-db:3307/testdb_spring?useSSL=false&allowPublicKeyRetrieval=true'
                         
                         # Run tests
                         mvn test

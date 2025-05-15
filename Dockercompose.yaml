@@ -1,51 +1,47 @@
 version: '3.8'
 
 services:
-  jenkins:
-    build:
-      context: ./jenkins
-      dockerfile: Dockerfile
-    container_name: jenkins-server
-    privileged: true
-    user: root
-    ports:
-      - "8099:8080"
-      - "50000:50000"
-    volumes:
-      - jenkins_home:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /usr/bin/docker:/usr/bin/docker
-    environment:
-      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
-    networks:
-      - jenkins-network
-
-  trivy:
-    image: aquasec/trivy:latest
-    container_name: trivy-scanner
-    volumes:
-      - trivy-cache:/root/.cache/
-    networks:
-      - jenkins-network
-
   mysql:
     image: mysql:8.0
     container_name: mysql-db
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: testdb_spring
+      MYSQL_USER: testuser
+      MYSQL_PASSWORD: testpass
     ports:
-      - "3307:3306"  # Using 3307 to avoid conflict with local MySQL
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
-      - jenkins-network
+      - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u", "root", "-proot"]
+      timeout: 10s
+      retries: 10
+      interval: 10s
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: auth-service
+    ports:
+      - "8083:8083"  # Changed to match your application.properties port
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/testdb_spring?useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - SERVER_PORT=8081
+    networks:
+      - app-network
+    depends_on:
+      mysql:
+        condition: service_healthy
 
 volumes:
-  jenkins_home:
-  trivy-cache:
   mysql_data:
 
 networks:
-  jenkins-network:
+  app-network:
     driver: bridge
