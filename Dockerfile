@@ -1,14 +1,17 @@
 
-FROM maven:3.8.5-openjdk-17 AS build
+# Multi-stage Dockerfile for the Spring Boot application
+FROM eclipse-temurin:17-jdk-alpine as builder
 WORKDIR /app
+COPY mvnw .
+COPY .mvn .mvn
 COPY pom.xml .
-# Download all required dependencies into one layer
-RUN mvn dependency:go-offline -B
-COPY src ./src
-RUN mvn package -DskipTests
+RUN chmod +x ./mvnw
+RUN ./mvnw dependency:go-offline -B
+COPY src src
+RUN ./mvnw package -DskipTests
 
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=builder /app/target/spring-boot-security-jwt-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8083
 ENTRYPOINT ["java", "-jar", "app.jar"]

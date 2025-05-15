@@ -1,104 +1,156 @@
 pipeline {
-    agent {
-        docker {
-            image 'maven:3.8.5-openjdk-17'
-            args '-v /root/.m2:/root/.m2'
-        }
+    agent any
+
+    tools {
+        maven 'Maven-3.9.0' // Make sure this matches your Jenkins Maven installation name
+        jdk 'JDK-17'       // Make sure this matches your Jenkins JDK installation name
     }
-    
+
     environment {
-        DOCKER_REGISTRY = 'zakariarekhla' // Change to your Docker registry
-        DOCKER_IMAGE_BACKEND = "${DOCKER_REGISTRY}/reservation-backend"
-        DOCKER_IMAGE_TAG = "${env.BUILD_NUMBER}"
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub') // Configure this in Jenkins credentials
+        // MySQL Configuration
+        MYSQL_ROOT_PASSWORD = 'root'
+        MYSQL_DATABASE = 'testdb_spring'
+
+        // Application Configuration
+        SPRING_DATASOURCE_URL = 'jdbc:mysql://localhost:3306/testdb_spring?useSSL=false&allowPublicKeyRetrieval=true'
+        SPRING_DATASOURCE_USERNAME = 'root'
+        SPRING_DATASOURCE_PASSWORD = ''
     }
-    
+
     stages {
-        stage('Build') {
+        stage('Checkout') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: '*/main']],
+                        doGenerateSubmoduleConfigurations: false,
+                        extensions: [[$class: 'CleanCheckout']],
+                        submoduleCfg: [],
+                        userRemoteConfigs: [[
+                                                    credentialsId: 'git_Jenk', // Configure this in Jenkins
+                                                    url: 'https://github.com/ZakariaRek/room-reservation-system-auth-service'
+                                            ]]
+                ])
             }
         }
-        
+
+        stage('Setup MySQL') {
+            steps {
+                script {
+                    // Using Docker to run MySQL for tests
+                    sh '''
+                        docker run -d \
+                            --name mysql-test-${BUILD_NUMBER} \
+                            -e MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD} \
+                            -e MYSQL_DATABASE=${MYSQL_DATABASE} \
+                            -p 3306:3306 \
+                            mysql:8.0
+                        
+                        # Wait for MySQL to be ready
+                        sleep 30
+                        
+                        # Check if MySQL is ready
+                        for i in {1..30}; do
+                            if docker exec mysql-test-${BUILD_NUMBER} mysqladmin ping -h localhost -u root -proot --silent; then
+                                echo "MySQL is ready!"
+                                break
+                            fi
+                            echo "Waiting for MySQL..."
+                            sleep 2
+                        done
+                    '''
+                }
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'mvn clean compile'
+            }
+        }
+
         stage('Test') {
             steps {
                 sh 'mvn test'
             }
             post {
                 always {
-                    junit '**/target/surefire-reports/TEST-*.xml'
+                    junit '**/target/surefire-reports/*.xml'
                 }
             }
         }
-        
-//        stage('SonarQube Analysis') {
-//            steps {
-//                withSonarQubeEnv('SonarQube') {
-//                    sh 'mvn sonar:sonar'
-//                }
-//            }
-//        }
-//
-        stage('Build Docker Image') {
+
+        stage('Package') {
             steps {
-                script {
-                    sh "docker build -t ${DOCKER_IMAGE_BACKEND}:${DOCKER_IMAGE_TAG} ."
-                    sh "docker tag ${DOCKER_IMAGE_BACKEND}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_BACKEND}:latest"
+                sh 'mvn package -DskipTests'
+            }
+            post {
+                success {
+                    archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
                 }
             }
         }
-        
-        stage('Push Docker Image') {
+
+        stage('Code Quality Analysis') {
             steps {
-                script {
-                    sh "echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin"
-                    sh "docker push ${DOCKER_IMAGE_BACKEND}:${DOCKER_IMAGE_TAG}"
-                    sh "docker push ${DOCKER_IMAGE_BACKEND}:latest"
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    sh 'mvn checkstyle:checkstyle'
                 }
             }
         }
-        
-//        stage('Deploy to Development') {
-//            when {
-//                branch 'develop'
-//            }
-//            steps {
-//                script {
-//                    // Deploy to development environment using docker-compose
-//                    sh 'scp docker-compose.yml user@dev-server:/path/to/deployment/'
-//                    sh 'ssh user@dev-server "cd /path/to/deployment && docker-compose pull && docker-compose up -d"'
-//                }
-//            }
-//        }
-        
-//        stage('Deploy to Production') {
-//            when {
-//                branch 'main'
-//            }
-//            steps {
-//                // Production deployment requires manual approval
-//                input message: 'Deploy to production?', ok: 'Yes'
-//                script {
-//                    // Deploy to production environment
-//                    sh 'scp docker-compose.yml user@prod-server:/path/to/deployment/'
-//                    sh 'ssh user@prod-server "cd /path/to/deployment && docker-compose pull && docker-compose up -d"'
-//                }
-//            }
-//        }
     }
-    
+
     post {
         always {
-            // Clean up Docker images
-            sh "docker rmi ${DOCKER_IMAGE_BACKEND}:${DOCKER_IMAGE_TAG}"
-            sh "docker rmi ${DOCKER_IMAGE_BACKEND}:latest"
+            // Cleanup MySQL container
+            sh 'docker stop mysql-test-${BUILD_NUMBER} || true'
+            sh 'docker rm mysql-test-${BUILD_NUMBER} || true'
+
+            // Clean workspace
+            cleanWs()
         }
+
         success {
-            echo 'Build and deployment successful!'
+            script {
+                // Send notification on success
+                emailext(
+                        subject: "Jenkins Build Success: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
+                        body: """
+                        <h2>Build Success</h2>
+                        <p>The build was successful!</p>
+                        <ul>
+                            <li>Job: ${env.JOB_NAME}</li>
+                            <li>Build Number: ${env.BUILD_NUMBER}</li>
+                            <li>Branch: ${env.BRANCH_NAME}</li>
+                            <li>Build URL: ${env.BUILD_URL}</li>
+                        </ul>
+                    """,
+                        to: 'zakariaest49@gmail.com',
+                        mimeType: 'text/html'
+                )
+            }
         }
+
         failure {
-            echo 'Build or deployment failed!'
-            // You can add notification steps here (email, Slack, etc.)
+            script {
+                // Send notification on failure
+                emailext(
+                        subject: "Jenkins Build Failed: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
+                        body: """
+                        <h2>Build Failed</h2>
+                        <p>The build has failed!</p>
+                        <ul>
+                            <li>Job: ${env.JOB_NAME}</li>
+                            <li>Build Number: ${env.BUILD_NUMBER}</li>
+                            <li>Branch: ${env.BRANCH_NAME}</li>
+                            <li>Build URL: ${env.BUILD_URL}</li>
+                        </ul>
+                        <p>Please check the console output for details.</p>
+                    """,
+                        to: 'zakariaest49@gmail.com',
+                        mimeType: 'text/html'
+                )
+            }
         }
     }
 }
