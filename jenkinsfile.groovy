@@ -74,23 +74,7 @@ pipeline {
             }
         }
 
-        /* TESTS SKIPPED
-        stage('Run Tests') {
-            steps {
-                script {
-                    sh '''
-                        # Run tests with test profile (uses H2)
-                        mvn test -Dspring.profiles.active=test
-                    '''
-                }
-            }
-            post {
-                always {
-                    junit '**/target/surefire-reports/*.xml'
-                }
-            }
-        }
-        */
+
 
         stage('Package Application') {
             steps {
