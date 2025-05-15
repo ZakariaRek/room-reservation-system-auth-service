@@ -100,6 +100,10 @@ pipeline {
             steps {
                 script {
                     sh '''
+                        # Stop any existing containers that might be using port 8083
+                        docker ps -q --filter "publish=8083" | xargs -r docker stop || true
+                        docker ps -aq --filter "name=auth-service-test" | xargs -r docker rm || true
+                        
                         # Run the application container with properly quoted URL
                         docker run -d \
                             --name auth-service-test \
