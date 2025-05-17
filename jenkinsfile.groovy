@@ -181,41 +181,18 @@ pipeline {
 
         success {
             script {
-                emailext(
-                        subject: "Jenkins Build Success: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
-                        body: """
-                        <h2>Build Success</h2>
-                        <p>The build was successful!</p>
-                        <ul>
-                            <li>Job: ${env.JOB_NAME}</li>
-                            <li>Build Number: ${env.BUILD_NUMBER}</li>
-                            <li>Docker Image: ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}</li>
-                            <li>Build URL: ${env.BUILD_URL}</li>
-                        </ul>
-                    """,
-                        to: 'zakariaest49@gmail.com',
-                        mimeType: 'text/html'
-                )
+               sh """
+                    echo "Build and tests completed successfully."
+                    echo "Docker image ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} is ready."
+                """
             }
         }
 
         failure {
             script {
-                emailext(
-                        subject: "Jenkins Build Failed: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
-                        body: """
-                        <h2>Build Failed</h2>
-                        <p>The build has failed!</p>
-                        <ul>
-                            <li>Job: ${env.JOB_NAME}</li>
-                            <li>Build Number: ${env.BUILD_NUMBER}</li>
-                            <li>Build URL: ${env.BUILD_URL}</li>
-                        </ul>
-                        <p>Please check the console output for details.</p>
-                    """,
-                        to: 'zakariaest49@gmail.com',
-                        mimeType: 'text/html'
-                )
+                sh """
+                    echo "Build failed. Please check the logs."
+                """
             }
         }
     }
