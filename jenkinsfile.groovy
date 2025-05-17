@@ -164,7 +164,6 @@ pipeline {
     post {
         always {
             script {
-                // Clean up containers
                 sh """
                     docker stop mysql-db || true
                     docker rm mysql-db || true
