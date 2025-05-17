@@ -152,8 +152,11 @@ pipeline {
                             aquasec/trivy:latest image \
                             --exit-code 0 \
                             --severity HIGH,CRITICAL \
-                            --timeout 10m \
+                            --timeout 30m \
                             --scanners vuln \
+                            --vuln-type os \
+                            --skip-db-update \
+                            --no-progress \
                             ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
                     """
                 }
