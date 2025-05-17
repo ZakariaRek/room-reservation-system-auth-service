@@ -154,8 +154,7 @@ pipeline {
                             --severity HIGH,CRITICAL \
                             --timeout 30m \
                             --scanners vuln \
-                            --vuln-type os \
-                            --skip-db-update \
+                            --pkg-types os \
                             --no-progress \
                             ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
                     """
