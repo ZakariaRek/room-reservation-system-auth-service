@@ -5,13 +5,15 @@ pipeline {
         maven 'Maven-3.9.0'
         jdk 'JDK-17'
     }
+    triggers {
+        // Poll SCM once every 24 hours at a random time
+        pollSCM('H H * * *')
+    }
 
     environment {
-        // MySQL Configuration
         MYSQL_ROOT_PASSWORD = 'root'
         MYSQL_DATABASE = 'testdb_spring'
 
-        // Docker Configuration
         DOCKER_IMAGE_NAME = 'room-reservation-auth-service'
         DOCKER_IMAGE_TAG = "${BUILD_NUMBER}"
     }
@@ -180,18 +182,41 @@ pipeline {
 
         success {
             script {
-               sh """
-                    echo "Build and tests completed successfully."
-                    echo "Docker image ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} is ready."
-                """
+                emailext(
+                        subject: "Jenkins Build Success: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
+                        body: """
+                        <h2>Build Success</h2>
+                        <p>The build was successful!</p>
+                        <ul>
+                            <li>Job: ${env.JOB_NAME}</li>
+                            <li>Build Number: ${env.BUILD_NUMBER}</li>
+                            <li>Docker Image: ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}</li>
+                            <li>Build URL: ${env.BUILD_URL}</li>
+                        </ul>
+                    """,
+                        to: 'zakariaest49@gmail.com',
+                        mimeType: 'text/html'
+                )
             }
         }
 
         failure {
             script {
-                sh """
-                    echo "Build failed. Please check the logs."
-                """
+                emailext(
+                        subject: "Jenkins Build Failed: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
+                        body: """
+                        <h2>Build Failed</h2>
+                        <p>The build has failed!</p>
+                        <ul>
+                            <li>Job: ${env.JOB_NAME}</li>
+                            <li>Build Number: ${env.BUILD_NUMBER}</li>
+                            <li>Build URL: ${env.BUILD_URL}</li>
+                        </ul>
+                        <p>Please check the console output for details.</p>
+                    """,
+                        to: 'zakariaest49@gmail.com',
+                        mimeType: 'text/html'
+                )
             }
         }
     }
