@@ -7,8 +7,7 @@ pipeline {
     }
     triggers {
         // Poll SCM once every 24 hours at a random time
-        pollSCM('H H * * *')
-    }
+        pollSCM('H 0 * * *')    }
 
     environment {
         MYSQL_ROOT_PASSWORD = 'root'
@@ -181,22 +180,19 @@ pipeline {
         }
 
         success {
+
             script {
-                emailext(
-                        subject: "Jenkins Build Success: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
-                        body: """
-                        <h2>Build Success</h2>
-                        <p>The build was successful!</p>
-                        <ul>
-                            <li>Job: ${env.JOB_NAME}</li>
-                            <li>Build Number: ${env.BUILD_NUMBER}</li>
-                            <li>Docker Image: ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}</li>
-                            <li>Build URL: ${env.BUILD_URL}</li>
-                        </ul>
-                    """,
-                        to: 'zakariaest49@gmail.com',
-                        mimeType: 'text/html'
-                )
+                try {
+                    echo "Attempting to send email using basic mail step..."
+                    mail(
+                            to: 'zakariarekhla@gmail.com',
+                            subject: "SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                            body: "Job '${env.JOB_NAME}' build #${env.BUILD_NUMBER} succeeded.\n\nCheck: ${env.BUILD_URL}"
+                    )
+                    echo "Basic mail sent successfully"
+                } catch (e) {
+                    echo "Failed to send basic mail: ${e.message}"
+                }
             }
         }
 
@@ -214,7 +210,7 @@ pipeline {
                         </ul>
                         <p>Please check the console output for details.</p>
                     """,
-                        to: 'zakariaest49@gmail.com',
+                        to: 'zakariarekhla@gmail.com',
                         mimeType: 'text/html'
                 )
             }
